@@ -28,7 +28,8 @@
 # MAGIC   count(*) AS criteria_count,
 # MAGIC   sum(weight) AS total_weight,
 # MAGIC   sum(CASE WHEN type_code = 'OBJ' THEN weight ELSE 0 END) AS objective_weight,
-# MAGIC   sum(CASE WHEN type_code = 'SUBJ' THEN weight ELSE 0 END) AS subjective_weight
+# MAGIC   sum(CASE WHEN type_code = 'SUBJ' THEN weight ELSE 0 END) AS subjective_weight,
+# MAGIC   sum(CASE WHEN type_code = 'OBJ' AND subtype_code = '1' THEN weight ELSE 0 END) AS price_weight
 # MAGIC FROM procurement.silver.tender_awarding_criteria
 # MAGIC GROUP BY entry_id, folder_id
 
@@ -53,6 +54,7 @@
 # MAGIC   t.estimated_amount,
 # MAGIC   to_timestamp(t.submission_deadline_local) AS submission_deadline,
 # MAGIC   datediff(to_date(t.submission_deadline_local), to_date(from_utc_timestamp(current_timestamp(), 'Europe/Madrid'))) AS days_to_deadline,
+# MAGIC   w.price_weight,
 # MAGIC   w.subjective_weight,
 # MAGIC   t.cpv_codes,
 # MAGIC   t.detail_url
@@ -134,7 +136,7 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT folder_id, title, organ_name, tax_exclusive_amount, days_to_deadline, subjective_weight
+# MAGIC SELECT folder_id, title, organ_name, tax_exclusive_amount, days_to_deadline, price_weight, subjective_weight
 # MAGIC FROM procurement.gold.open_tenders
 # MAGIC ORDER BY days_to_deadline
 # MAGIC LIMIT 10
@@ -142,7 +144,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Award-criteria codes to verify before building a price-weight metric
+# MAGIC ## Award-criteria code distribution
 
 # COMMAND ----------
 

@@ -1,4 +1,17 @@
-from procurement.silver import parse_tender, quality_errors, safe_parse_tender
+from procurement.silver import (
+    normalize_code,
+    parse_tender,
+    quality_errors,
+    safe_parse_tender,
+)
+
+
+def test_normalize_code_strips_leading_zeros_from_numeric_codes():
+    assert normalize_code("02") == "2"
+    assert normalize_code("99") == "99"
+    assert normalize_code("OBJ") == "OBJ"
+    assert normalize_code(None) is None
+
 
 ENTRY = """<entry xmlns="http://www.w3.org/2005/Atom"
  xmlns:cbc="urn:dgpe:names:draft:codice:schema:xsd:CommonBasicComponents-2"

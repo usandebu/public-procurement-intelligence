@@ -50,6 +50,14 @@ def _number(el: ET.Element | None, *path: str) -> float | None:
         return None
 
 
+def normalize_code(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if value.isdigit():
+        return str(int(value))
+    return value
+
+
 def empty_tender() -> dict:
     return {
         "folder_id": None,
@@ -100,7 +108,9 @@ def _parse_criteria(status: ET.Element) -> list[dict]:
             {
                 "position": position,
                 "type_code": _text(node, "AwardingCriteriaTypeCode"),
-                "subtype_code": _text(node, "AwardingCriteriaSubTypeCode"),
+                "subtype_code": normalize_code(
+                    _text(node, "AwardingCriteriaSubTypeCode")
+                ),
                 "description": _text(node, "Description"),
                 "weight": _number(node, "WeightNumeric"),
                 "note": _text(node, "Note"),
