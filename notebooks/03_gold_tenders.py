@@ -2,11 +2,11 @@
 # MAGIC %md
 # MAGIC # 03 - Gold tenders
 # MAGIC
-# MAGIC Analytical tables over Silver for the dashboard and Genie: open tenders, spend by organ, budget bands and award-criteria weights.
+# MAGIC Analytical tables over Silver for the dashboard and Genie: open tenders, spend by province, budget bands and award-criteria weights.
 # MAGIC
 # MAGIC **Reads:** `procurement.silver.tenders`, `procurement.silver.tender_awarding_criteria`
 # MAGIC
-# MAGIC **Writes:** `procurement.gold.open_tenders`, `procurement.gold.organ_summary`, `procurement.gold.budget_bands`, `procurement.gold.tender_criteria_weights`
+# MAGIC **Writes:** `procurement.gold.open_tenders`, `procurement.gold.province_summary`, `procurement.gold.budget_bands`, `procurement.gold.tender_criteria_weights`
 
 # COMMAND ----------
 
@@ -71,22 +71,21 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Spend by organ
+# MAGIC ## Spend by province
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE procurement.gold.organ_summary AS
+# MAGIC CREATE OR REPLACE TABLE procurement.gold.province_summary AS
 # MAGIC SELECT
-# MAGIC   organ_nif,
-# MAGIC   organ_name,
-# MAGIC   parent_organ_name,
+# MAGIC   nuts_code,
+# MAGIC   max(province) AS province,
 # MAGIC   count(*) AS tenders,
 # MAGIC   count_if(status_code = 'PUB') AS published_tenders,
 # MAGIC   sum(tax_exclusive_amount) AS total_budget,
 # MAGIC   avg(tax_exclusive_amount) AS avg_budget
 # MAGIC FROM procurement.silver.tenders
-# MAGIC GROUP BY organ_nif, organ_name, parent_organ_name
+# MAGIC GROUP BY nuts_code
 
 # COMMAND ----------
 
@@ -129,7 +128,7 @@
 # MAGIC %sql
 # MAGIC SELECT 'tenders' AS metric, count(*) AS value FROM procurement.silver.tenders
 # MAGIC UNION ALL SELECT 'open_tenders', count(*) FROM procurement.gold.open_tenders
-# MAGIC UNION ALL SELECT 'organs', count(*) FROM procurement.gold.organ_summary
+# MAGIC UNION ALL SELECT 'provinces', count(*) FROM procurement.gold.province_summary
 # MAGIC UNION ALL SELECT 'tenders_with_criteria', count(DISTINCT entry_id) FROM procurement.gold.tender_criteria_weights
 # MAGIC UNION ALL SELECT 'tenders_without_budget', count(*) FROM procurement.silver.tenders WHERE tax_exclusive_amount IS NULL
 

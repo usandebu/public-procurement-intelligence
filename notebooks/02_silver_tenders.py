@@ -120,7 +120,7 @@ print(f"alive:              {alive.count()}")
 
 # COMMAND ----------
 
-parse_tender_udf = F.udf(safe_parse_tender, PARSED_SCHEMA)
+parse_tender_udf = F.udf(lambda raw_xml: safe_parse_tender(raw_xml), PARSED_SCHEMA)
 
 parsed = alive.select(
     "entry_id",
