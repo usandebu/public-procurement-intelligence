@@ -40,7 +40,7 @@ NAMESPACES = {
     "cbc-place-ext": "urn:dgpe:names:draft:codice-place-ext:schema:xsd:CommonBasicComponents-2",
     "cac-place-ext": "urn:dgpe:names:draft:codice-place-ext:schema:xsd:CommonAggregateComponents-2",
     "at": "http://purl.org/atompub/tombstones/1.0",
-    "ns7": "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
+    "ext": "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
 }
 
 for prefix, uri in NAMESPACES.items():
