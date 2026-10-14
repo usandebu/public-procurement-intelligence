@@ -25,13 +25,14 @@
 # MAGIC SELECT
 # MAGIC   entry_id,
 # MAGIC   folder_id,
+# MAGIC   lot_id,
 # MAGIC   count(*) AS criteria_count,
 # MAGIC   sum(weight) AS total_weight,
 # MAGIC   sum(CASE WHEN type_code = 'OBJ' THEN weight ELSE 0 END) AS objective_weight,
 # MAGIC   sum(CASE WHEN type_code = 'SUBJ' THEN weight ELSE 0 END) AS subjective_weight,
 # MAGIC   sum(CASE WHEN type_code = 'OBJ' AND subtype_code = '1' THEN weight ELSE 0 END) AS price_weight
 # MAGIC FROM procurement.silver.tender_awarding_criteria
-# MAGIC GROUP BY entry_id, folder_id
+# MAGIC GROUP BY entry_id, folder_id, lot_id
 
 # COMMAND ----------
 
@@ -59,7 +60,11 @@
 # MAGIC   t.cpv_codes,
 # MAGIC   t.detail_url
 # MAGIC FROM procurement.silver.tenders t
-# MAGIC LEFT JOIN procurement.gold.tender_criteria_weights w ON t.entry_id = w.entry_id
+# MAGIC LEFT JOIN (
+# MAGIC   SELECT entry_id, avg(price_weight) AS price_weight, avg(subjective_weight) AS subjective_weight
+# MAGIC   FROM procurement.gold.tender_criteria_weights
+# MAGIC   GROUP BY entry_id
+# MAGIC ) w ON t.entry_id = w.entry_id
 # MAGIC WHERE t.status_code = 'PUB'
 # MAGIC   AND to_timestamp(t.submission_deadline_local) >= from_utc_timestamp(current_timestamp(), 'Europe/Madrid')
 
@@ -125,7 +130,7 @@
 # MAGIC SELECT 'tenders' AS metric, count(*) AS value FROM procurement.silver.tenders
 # MAGIC UNION ALL SELECT 'open_tenders', count(*) FROM procurement.gold.open_tenders
 # MAGIC UNION ALL SELECT 'organs', count(*) FROM procurement.gold.organ_summary
-# MAGIC UNION ALL SELECT 'tenders_with_criteria', count(*) FROM procurement.gold.tender_criteria_weights
+# MAGIC UNION ALL SELECT 'tenders_with_criteria', count(DISTINCT entry_id) FROM procurement.gold.tender_criteria_weights
 # MAGIC UNION ALL SELECT 'tenders_without_budget', count(*) FROM procurement.silver.tenders WHERE tax_exclusive_amount IS NULL
 
 # COMMAND ----------

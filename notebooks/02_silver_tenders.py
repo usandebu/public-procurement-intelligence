@@ -52,6 +52,7 @@ PARSED_SCHEMA = """
     submission_deadline_local string,
     criteria array<struct<
         position: int,
+        lot_id: string,
         type_code: string,
         subtype_code: string,
         description: string,

@@ -99,14 +99,15 @@ def quality_errors(tender: dict) -> list[str]:
     return errors
 
 
-def _parse_criteria(status: ET.Element) -> list[dict]:
+def _criteria_of(parent: ET.Element, lot_id: str | None, start: int) -> list[dict]:
     criteria = []
-    for position, node in enumerate(
-        _findall(status, "TenderingTerms", "AwardingTerms", "AwardingCriteria")
+    for offset, node in enumerate(
+        _findall(parent, "TenderingTerms", "AwardingTerms", "AwardingCriteria")
     ):
         criteria.append(
             {
-                "position": position,
+                "position": start + offset,
+                "lot_id": lot_id,
                 "type_code": _text(node, "AwardingCriteriaTypeCode"),
                 "subtype_code": normalize_code(
                     _text(node, "AwardingCriteriaSubTypeCode")
@@ -116,6 +117,13 @@ def _parse_criteria(status: ET.Element) -> list[dict]:
                 "note": _text(node, "Note"),
             }
         )
+    return criteria
+
+
+def _parse_criteria(status: ET.Element) -> list[dict]:
+    criteria = _criteria_of(status, None, 0)
+    for lot in _findall(status, "ProcurementProjectLot"):
+        criteria += _criteria_of(lot, _text(lot, "ID"), len(criteria))
     return criteria
 
 

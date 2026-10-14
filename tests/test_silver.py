@@ -146,6 +146,27 @@ def test_parse_tender_reads_awarding_criteria_with_weights():
     assert [c["position"] for c in criteria] == [0, 1]
 
 
+def test_parse_tender_reads_criteria_inside_lots():
+    lot = (
+        "<cac:ProcurementProjectLot><cbc:ID>2</cbc:ID><cac:TenderingTerms><cac:AwardingTerms>"
+        "<cac:AwardingCriteria><cbc:AwardingCriteriaTypeCode>OBJ</cbc:AwardingCriteriaTypeCode>"
+        "<cbc:Description>Precio lote</cbc:Description>"
+        "<cbc:AwardingCriteriaSubTypeCode>1</cbc:AwardingCriteriaSubTypeCode>"
+        "<cbc:WeightNumeric>60</cbc:WeightNumeric></cac:AwardingCriteria>"
+        "</cac:AwardingTerms></cac:TenderingTerms></cac:ProcurementProjectLot>"
+    )
+    xml = ENTRY.replace(
+        "</cac-place-ext:ContractFolderStatus>",
+        lot + "</cac-place-ext:ContractFolderStatus>",
+    )
+
+    criteria = parse_tender(xml)["criteria"]
+
+    assert [c["lot_id"] for c in criteria] == [None, None, "2"]
+    assert [c["position"] for c in criteria] == [0, 1, 2]
+    assert criteria[2]["description"] == "Precio lote"
+
+
 def test_parse_tender_reads_documents_of_every_kind():
     documents = parse_tender(ENTRY)["documents"]
 
