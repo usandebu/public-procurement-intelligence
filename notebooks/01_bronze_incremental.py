@@ -1,8 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 03 - Bronze incremental ingestion
+# MAGIC # 01 - Bronze incremental ingestion
 # MAGIC
 # MAGIC Walks the PLACSP Atom feed backwards from the newest page until it reaches the stored watermark, and merges in-scope tenders (CPV prefix) and tombstones into Bronze.
+# MAGIC
+# MAGIC **Reads:** PLACSP Atom feed, `procurement.bronze.ingestion_runs`
+# MAGIC
+# MAGIC **Writes:** `procurement.bronze.tenders_raw`, `procurement.bronze.tenders_tombstones_raw`, `procurement.bronze.ingestion_runs`
 
 # COMMAND ----------
 
@@ -18,9 +22,9 @@ sys.path.append(os.path.abspath("../src"))
 from procurement.feed import collect_since
 
 FEED_URL = "https://contrataciondelsectorpublico.gob.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom"
-CPV_PREFIX = "72"
-BACKFILL_DAYS = 7
-MAX_PAGES = None
+CPV_PREFIX = "72"  # CPV code prefix of tenders kept in Bronze
+BACKFILL_DAYS = 7  # days of history loaded on the first run
+MAX_PAGES = None  # maximum feed pages per run; None means no limit
 
 TENDERS_TABLE = "procurement.bronze.tenders_raw"
 TOMBSTONES_TABLE = "procurement.bronze.tenders_tombstones_raw"

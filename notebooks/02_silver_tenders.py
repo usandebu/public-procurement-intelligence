@@ -1,8 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 04 - Silver tenders
+# MAGIC # 02 - Silver tenders
 # MAGIC
 # MAGIC Rebuilds the Silver layer from Bronze: latest version per tender, annulled tenders removed, CODICE XML parsed into typed columns, and rows failing quality rules routed to a rejects table.
+# MAGIC
+# MAGIC **Reads:** `procurement.bronze.tenders_raw`, `procurement.bronze.tenders_tombstones_raw`
+# MAGIC
+# MAGIC **Writes:** `procurement.silver.tenders`, `procurement.silver.tender_awarding_criteria`, `procurement.silver.tender_documents`, `procurement.silver.tenders_rejected`
 
 # COMMAND ----------
 
@@ -24,6 +28,7 @@ SILVER_CRITERIA = "procurement.silver.tender_awarding_criteria"
 SILVER_DOCUMENTS = "procurement.silver.tender_documents"
 SILVER_REJECTED = "procurement.silver.tenders_rejected"
 
+# Struct returned by safe_parse_tender for one raw_xml
 PARSED_SCHEMA = """
     folder_id string,
     title string,
