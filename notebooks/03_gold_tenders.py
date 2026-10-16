@@ -4,14 +4,20 @@
 # MAGIC
 # MAGIC Analytical tables over Silver for the dashboard and Genie: open tenders, spend by province, budget bands and award-criteria weights.
 # MAGIC
-# MAGIC **Reads:** `procurement.silver.tenders`, `procurement.silver.tender_awarding_criteria`
+# MAGIC **Reads:** `silver.tenders`, `silver.tender_awarding_criteria`
 # MAGIC
-# MAGIC **Writes:** `procurement.gold.open_tenders`, `procurement.gold.province_summary`, `procurement.gold.budget_bands`, `procurement.gold.tender_criteria_weights`
+# MAGIC **Writes:** `gold.open_tenders`, `gold.province_summary`, `gold.budget_bands`, `gold.tender_criteria_weights`
+
+# COMMAND ----------
+
+dbutils.widgets.text("catalog", "procurement")
+CATALOG = dbutils.widgets.get("catalog")
+spark.sql(f"USE CATALOG {CATALOG}")
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE SCHEMA IF NOT EXISTS procurement.gold
+# MAGIC CREATE SCHEMA IF NOT EXISTS gold
 
 # COMMAND ----------
 
@@ -21,7 +27,7 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE procurement.gold.tender_criteria_weights AS
+# MAGIC CREATE OR REPLACE TABLE gold.tender_criteria_weights AS
 # MAGIC SELECT
 # MAGIC   entry_id,
 # MAGIC   folder_id,
@@ -31,7 +37,7 @@
 # MAGIC   sum(CASE WHEN type_code = 'OBJ' THEN weight ELSE 0 END) AS objective_weight,
 # MAGIC   sum(CASE WHEN type_code = 'SUBJ' THEN weight ELSE 0 END) AS subjective_weight,
 # MAGIC   sum(CASE WHEN type_code = 'OBJ' AND subtype_code = '1' THEN weight ELSE 0 END) AS price_weight
-# MAGIC FROM procurement.silver.tender_awarding_criteria
+# MAGIC FROM silver.tender_awarding_criteria
 # MAGIC GROUP BY entry_id, folder_id, lot_id
 
 # COMMAND ----------
@@ -42,7 +48,7 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE procurement.gold.open_tenders AS
+# MAGIC CREATE OR REPLACE TABLE gold.open_tenders AS
 # MAGIC SELECT
 # MAGIC   t.entry_id,
 # MAGIC   t.folder_id,
@@ -59,10 +65,10 @@
 # MAGIC   w.subjective_weight,
 # MAGIC   t.cpv_codes,
 # MAGIC   t.detail_url
-# MAGIC FROM procurement.silver.tenders t
+# MAGIC FROM silver.tenders t
 # MAGIC LEFT JOIN (
 # MAGIC   SELECT entry_id, avg(price_weight) AS price_weight, avg(subjective_weight) AS subjective_weight
-# MAGIC   FROM procurement.gold.tender_criteria_weights
+# MAGIC   FROM gold.tender_criteria_weights
 # MAGIC   GROUP BY entry_id
 # MAGIC ) w ON t.entry_id = w.entry_id
 # MAGIC WHERE t.status_code = 'PUB'
@@ -76,7 +82,7 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE procurement.gold.province_summary AS
+# MAGIC CREATE OR REPLACE TABLE gold.province_summary AS
 # MAGIC SELECT
 # MAGIC   nuts_code,
 # MAGIC   max(province) AS province,
@@ -84,7 +90,7 @@
 # MAGIC   count_if(status_code = 'PUB') AS published_tenders,
 # MAGIC   sum(tax_exclusive_amount) AS total_budget,
 # MAGIC   avg(tax_exclusive_amount) AS avg_budget
-# MAGIC FROM procurement.silver.tenders
+# MAGIC FROM silver.tenders
 # MAGIC GROUP BY nuts_code
 
 # COMMAND ----------
@@ -95,7 +101,7 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE procurement.gold.budget_bands AS
+# MAGIC CREATE OR REPLACE TABLE gold.budget_bands AS
 # MAGIC SELECT
 # MAGIC   CASE
 # MAGIC     WHEN tax_exclusive_amount IS NULL THEN 6
@@ -115,7 +121,7 @@
 # MAGIC   END AS band,
 # MAGIC   count(*) AS tenders,
 # MAGIC   sum(tax_exclusive_amount) AS total_budget
-# MAGIC FROM procurement.silver.tenders
+# MAGIC FROM silver.tenders
 # MAGIC GROUP BY 1, 2
 
 # COMMAND ----------
@@ -126,22 +132,22 @@
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT 'tenders' AS metric, count(*) AS value FROM procurement.silver.tenders
-# MAGIC UNION ALL SELECT 'open_tenders', count(*) FROM procurement.gold.open_tenders
-# MAGIC UNION ALL SELECT 'provinces', count(*) FROM procurement.gold.province_summary
-# MAGIC UNION ALL SELECT 'tenders_with_criteria', count(DISTINCT entry_id) FROM procurement.gold.tender_criteria_weights
-# MAGIC UNION ALL SELECT 'tenders_without_budget', count(*) FROM procurement.silver.tenders WHERE tax_exclusive_amount IS NULL
+# MAGIC SELECT 'tenders' AS metric, count(*) AS value FROM silver.tenders
+# MAGIC UNION ALL SELECT 'open_tenders', count(*) FROM gold.open_tenders
+# MAGIC UNION ALL SELECT 'provinces', count(*) FROM gold.province_summary
+# MAGIC UNION ALL SELECT 'tenders_with_criteria', count(DISTINCT entry_id) FROM gold.tender_criteria_weights
+# MAGIC UNION ALL SELECT 'tenders_without_budget', count(*) FROM silver.tenders WHERE tax_exclusive_amount IS NULL
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT * FROM procurement.gold.budget_bands ORDER BY band_order
+# MAGIC SELECT * FROM gold.budget_bands ORDER BY band_order
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC SELECT folder_id, title, organ_name, tax_exclusive_amount, days_to_deadline, price_weight, subjective_weight
-# MAGIC FROM procurement.gold.open_tenders
+# MAGIC FROM gold.open_tenders
 # MAGIC ORDER BY days_to_deadline
 # MAGIC LIMIT 10
 
@@ -154,6 +160,6 @@
 
 # MAGIC %sql
 # MAGIC SELECT type_code, subtype_code, count(*) AS criteria, min(description) AS example_description
-# MAGIC FROM procurement.silver.tender_awarding_criteria
+# MAGIC FROM silver.tender_awarding_criteria
 # MAGIC GROUP BY type_code, subtype_code
 # MAGIC ORDER BY criteria DESC

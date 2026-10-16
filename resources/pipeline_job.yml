@@ -1,0 +1,41 @@
+resources:
+  jobs:
+    procurement_pipeline:
+      name: procurement-pipeline
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+
+      schedule:
+        quartz_cron_expression: "0 0 21 * * ?"
+        timezone_id: Europe/Madrid
+        pause_status: UNPAUSED
+
+      tasks:
+        - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ../notebooks/01_bronze_incremental.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          max_retries: 1
+          timeout_seconds: 3600
+
+        - task_key: silver_tenders
+          depends_on:
+            - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ../notebooks/02_silver_tenders.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          timeout_seconds: 1800
+
+        - task_key: gold_tenders
+          depends_on:
+            - task_key: silver_tenders
+          notebook_task:
+            notebook_path: ../notebooks/03_gold_tenders.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          timeout_seconds: 1800

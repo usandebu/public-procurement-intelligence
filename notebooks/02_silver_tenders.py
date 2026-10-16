@@ -4,9 +4,9 @@
 # MAGIC
 # MAGIC Rebuilds the Silver layer from Bronze: latest version per tender, annulled tenders removed, CODICE XML parsed into typed columns, and rows failing quality rules routed to a rejects table.
 # MAGIC
-# MAGIC **Reads:** `procurement.bronze.tenders_raw`, `procurement.bronze.tenders_tombstones_raw`
+# MAGIC **Reads:** `bronze.tenders_raw`, `bronze.tenders_tombstones_raw`
 # MAGIC
-# MAGIC **Writes:** `procurement.silver.tenders`, `procurement.silver.tender_awarding_criteria`, `procurement.silver.tender_documents`, `procurement.silver.tenders_rejected`
+# MAGIC **Writes:** `silver.tenders`, `silver.tender_awarding_criteria`, `silver.tender_documents`, `silver.tenders_rejected`
 
 # COMMAND ----------
 
@@ -20,13 +20,17 @@ sys.path.append(os.path.abspath("../src"))
 
 from procurement.silver import safe_parse_tender
 
-BRONZE_TENDERS = "procurement.bronze.tenders_raw"
-BRONZE_TOMBSTONES = "procurement.bronze.tenders_tombstones_raw"
+dbutils.widgets.text("catalog", "procurement")
+CATALOG = dbutils.widgets.get("catalog")
+spark.sql(f"USE CATALOG {CATALOG}")
 
-SILVER_TENDERS = "procurement.silver.tenders"
-SILVER_CRITERIA = "procurement.silver.tender_awarding_criteria"
-SILVER_DOCUMENTS = "procurement.silver.tender_documents"
-SILVER_REJECTED = "procurement.silver.tenders_rejected"
+BRONZE_TENDERS = "bronze.tenders_raw"
+BRONZE_TOMBSTONES = "bronze.tenders_tombstones_raw"
+
+SILVER_TENDERS = "silver.tenders"
+SILVER_CRITERIA = "silver.tender_awarding_criteria"
+SILVER_DOCUMENTS = "silver.tender_documents"
+SILVER_REJECTED = "silver.tenders_rejected"
 
 # Struct returned by safe_parse_tender for one raw_xml
 PARSED_SCHEMA = """
@@ -72,7 +76,7 @@ PARSED_SCHEMA = """
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE SCHEMA IF NOT EXISTS procurement.silver
+# MAGIC CREATE SCHEMA IF NOT EXISTS silver
 
 # COMMAND ----------
 
@@ -182,7 +186,7 @@ print("one row per tender: OK")
 
 # MAGIC %sql
 # MAGIC SELECT status_code, count(*) AS tenders
-# MAGIC FROM procurement.silver.tenders
+# MAGIC FROM silver.tenders
 # MAGIC GROUP BY status_code
 # MAGIC ORDER BY tenders DESC
 
@@ -190,7 +194,7 @@ print("one row per tender: OK")
 
 # MAGIC %sql
 # MAGIC SELECT folder_id, title, organ_name, total_amount, submission_deadline_local, cpv_codes
-# MAGIC FROM procurement.silver.tenders
+# MAGIC FROM silver.tenders
 # MAGIC ORDER BY version_ts DESC
 # MAGIC LIMIT 10
 
@@ -198,7 +202,7 @@ print("one row per tender: OK")
 
 # MAGIC %sql
 # MAGIC SELECT kind, count(*) AS documents
-# MAGIC FROM procurement.silver.tender_documents
+# MAGIC FROM silver.tender_documents
 # MAGIC GROUP BY kind
 # MAGIC ORDER BY documents DESC
 
@@ -206,5 +210,5 @@ print("one row per tender: OK")
 
 # MAGIC %sql
 # MAGIC SELECT errors, count(*) AS rejected
-# MAGIC FROM procurement.silver.tenders_rejected
+# MAGIC FROM silver.tenders_rejected
 # MAGIC GROUP BY errors

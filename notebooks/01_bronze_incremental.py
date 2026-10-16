@@ -4,9 +4,9 @@
 # MAGIC
 # MAGIC Walks the PLACSP Atom feed backwards from the newest page until it reaches the stored watermark, and merges in-scope tenders (CPV prefix) and tombstones into Bronze.
 # MAGIC
-# MAGIC **Reads:** PLACSP Atom feed, `procurement.bronze.ingestion_runs`
+# MAGIC **Reads:** PLACSP Atom feed, `bronze.ingestion_runs`
 # MAGIC
-# MAGIC **Writes:** `procurement.bronze.tenders_raw`, `procurement.bronze.tenders_tombstones_raw`, `procurement.bronze.ingestion_runs`
+# MAGIC **Writes:** `bronze.tenders_raw`, `bronze.tenders_tombstones_raw`, `bronze.ingestion_runs`
 
 # COMMAND ----------
 
@@ -21,14 +21,19 @@ sys.path.append(os.path.abspath("../src"))
 
 from procurement.feed import collect_since
 
+dbutils.widgets.text("catalog", "procurement")
+CATALOG = dbutils.widgets.get("catalog")
+spark.sql(f"CREATE CATALOG IF NOT EXISTS {CATALOG}")
+spark.sql(f"USE CATALOG {CATALOG}")
+
 FEED_URL = "https://contrataciondelsectorpublico.gob.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom"
 CPV_PREFIX = "72"  # CPV code prefix of tenders kept in Bronze
 BACKFILL_DAYS = 7  # days of history loaded on the first run
 MAX_PAGES = None  # maximum feed pages per run; None means no limit
 
-TENDERS_TABLE = "procurement.bronze.tenders_raw"
-TOMBSTONES_TABLE = "procurement.bronze.tenders_tombstones_raw"
-RUNS_TABLE = "procurement.bronze.ingestion_runs"
+TENDERS_TABLE = "bronze.tenders_raw"
+TOMBSTONES_TABLE = "bronze.tenders_tombstones_raw"
+RUNS_TABLE = "bronze.ingestion_runs"
 
 # COMMAND ----------
 
@@ -38,7 +43,12 @@ RUNS_TABLE = "procurement.bronze.ingestion_runs"
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE TABLE IF NOT EXISTS procurement.bronze.tenders_raw (
+# MAGIC CREATE SCHEMA IF NOT EXISTS bronze
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE TABLE IF NOT EXISTS bronze.tenders_raw (
 # MAGIC   entry_id STRING,
 # MAGIC   updated STRING,
 # MAGIC   updated_ts TIMESTAMP,
@@ -50,7 +60,7 @@ RUNS_TABLE = "procurement.bronze.ingestion_runs"
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE TABLE IF NOT EXISTS procurement.bronze.tenders_tombstones_raw (
+# MAGIC CREATE TABLE IF NOT EXISTS bronze.tenders_tombstones_raw (
 # MAGIC   ref STRING,
 # MAGIC   `when` STRING,
 # MAGIC   when_ts TIMESTAMP,
@@ -62,7 +72,7 @@ RUNS_TABLE = "procurement.bronze.ingestion_runs"
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC CREATE TABLE IF NOT EXISTS procurement.bronze.ingestion_runs (
+# MAGIC CREATE TABLE IF NOT EXISTS bronze.ingestion_runs (
 # MAGIC   run_at TIMESTAMP,
 # MAGIC   watermark_from TIMESTAMP,
 # MAGIC   max_seen_updated TIMESTAMP,
@@ -209,15 +219,15 @@ spark.createDataFrame(
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT * FROM procurement.bronze.ingestion_runs ORDER BY run_at DESC
+# MAGIC SELECT * FROM bronze.ingestion_runs ORDER BY run_at DESC
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC SELECT count(*) AS tenders, count(DISTINCT entry_id) AS distinct_tenders, min(updated_ts) AS oldest, max(updated_ts) AS newest
-# MAGIC FROM procurement.bronze.tenders_raw
+# MAGIC FROM bronze.tenders_raw
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT comment_type, count(*) AS tombstones FROM procurement.bronze.tenders_tombstones_raw GROUP BY comment_type
+# MAGIC SELECT comment_type, count(*) AS tombstones FROM bronze.tenders_tombstones_raw GROUP BY comment_type

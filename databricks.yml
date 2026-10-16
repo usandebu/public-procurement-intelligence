@@ -1,0 +1,26 @@
+bundle:
+  name: public-procurement-intelligence
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the bronze, silver and gold schemas
+    default: procurement
+
+sync:
+  exclude:
+    - docs/**
+    - tests/**
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog: procurement_dev
+
+  prod:
+    variables:
+      catalog: procurement
