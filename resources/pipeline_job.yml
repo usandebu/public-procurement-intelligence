@@ -8,6 +8,10 @@ resources:
         - name: catalog
           default: ${var.catalog}
 
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}
+
       schedule:
         quartz_cron_expression: "0 0 21 * * ?"
         timezone_id: Europe/Madrid

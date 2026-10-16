@@ -8,6 +8,8 @@ variables:
   catalog:
     description: Unity Catalog catalog holding the bronze, silver and gold schemas
     default: procurement
+  alert_email:
+    description: Address notified when the pipeline job fails
 
 sync:
   exclude:
