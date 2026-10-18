@@ -3,13 +3,9 @@ from dataclasses import dataclass
 
 from pypdf import PdfReader
 
+from procurement.pages import PageText
+
 MIN_CHARS_PER_PAGE = 100
-
-
-@dataclass(frozen=True)
-class PageText:
-    page_number: int
-    text: str
 
 
 @dataclass(frozen=True)

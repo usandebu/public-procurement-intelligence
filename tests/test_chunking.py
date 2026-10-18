@@ -4,7 +4,7 @@ from procurement.chunking import (
     is_table_of_contents,
     repeated_lines,
 )
-from procurement.pdf_text import PageText
+from procurement.pages import PageText
 
 BODIES = [
     "objeto",

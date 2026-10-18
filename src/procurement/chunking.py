@@ -2,7 +2,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 
-from procurement.pdf_text import PageText
+from procurement.pages import PageText
 
 MIN_PAGES_FOR_HEADER_DETECTION = 4
 HEADER_PAGE_SHARE = 0.4

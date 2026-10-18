@@ -17,7 +17,7 @@ from itertools import groupby
 sys.path.append(os.path.abspath("../src"))
 
 from procurement.chunking import chunk_pages, clean_pages
-from procurement.pdf_text import PageText
+from procurement.pages import PageText
 
 dbutils.widgets.text("catalog", "procurement")
 CATALOG = dbutils.widgets.get("catalog")
