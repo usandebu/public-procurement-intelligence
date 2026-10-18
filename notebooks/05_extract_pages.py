@@ -19,7 +19,7 @@ import sys
 
 sys.path.append(os.path.abspath("../src"))
 
-from procurement.documents import extract_pages
+from procurement.pdf_text import extract_pages
 
 dbutils.widgets.text("catalog", "procurement")
 CATALOG = dbutils.widgets.get("catalog")

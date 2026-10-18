@@ -3,7 +3,7 @@ import io
 import pytest
 from pypdf import PdfWriter
 
-from procurement.documents import doc_id, extract_pages, is_pdf
+from procurement.pdf_text import extract_pages
 
 
 def build_pdf(pages: list[str]) -> bytes:
@@ -71,14 +71,3 @@ def test_extract_pages_flags_documents_without_text_layer():
 def test_extract_pages_rejects_content_that_is_not_a_pdf():
     with pytest.raises(Exception):  # noqa: B017
         extract_pages(b"this is not a pdf")
-
-
-def test_is_pdf_checks_the_header():
-    assert is_pdf(b"%PDF-1.7 rest")
-    assert not is_pdf(b"<html>error page</html>")
-
-
-def test_doc_id_is_deterministic_and_depends_on_uri_and_hash():
-    assert doc_id("u", "h") == doc_id("u", "h")
-    assert doc_id("u", "h") != doc_id("u", "other")
-    assert doc_id("u", None) == doc_id("u", "")
