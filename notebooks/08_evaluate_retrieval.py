@@ -14,6 +14,8 @@
 
 # COMMAND ----------
 
+import contextlib
+import io
 import os
 import sys
 import uuid
@@ -35,12 +37,14 @@ dbutils.widgets.text("endpoint_name", "procurement_vs")
 dbutils.widgets.text("n_questions", "100")
 dbutils.widgets.text("query_type", "HYBRID")
 dbutils.widgets.text("top_k", "10")
+dbutils.widgets.text("scope_to_tender", "false")
 dbutils.widgets.text("generator_endpoint", "databricks-gpt-oss-120b")
 CATALOG = dbutils.widgets.get("catalog")
 ENDPOINT_NAME = dbutils.widgets.get("endpoint_name")
 N_QUESTIONS = int(dbutils.widgets.get("n_questions"))
 QUERY_TYPE = dbutils.widgets.get("query_type")
 TOP_K = int(dbutils.widgets.get("top_k"))
+SCOPE_TO_TENDER = dbutils.widgets.get("scope_to_tender").lower() == "true"
 GENERATOR = dbutils.widgets.get("generator_endpoint")
 
 spark.sql(f"USE CATALOG {CATALOG}")
@@ -81,6 +85,7 @@ MIN_CHUNK_CHARS = 600
 # MAGIC   index_name STRING,
 # MAGIC   query_type STRING,
 # MAGIC   top_k INT,
+# MAGIC   scoped BOOLEAN,
 # MAGIC   question_id STRING,
 # MAGIC   chunk_rank INT,
 # MAGIC   location_rank INT
@@ -123,7 +128,13 @@ if existing < N_QUESTIONS:
         """
     )
 
-questions = spark.table("gold.rag_eval_questions").collect()
+questions = spark.sql(
+    """
+    SELECT q.*, c.entry_id
+    FROM gold.rag_eval_questions q
+    JOIN silver.document_chunks c ON q.chunk_id = c.chunk_id
+    """
+).collect()
 print(f"questions available: {len(questions)}")
 
 # COMMAND ----------
@@ -148,12 +159,14 @@ failures = 0
 
 for q in questions:
     try:
-        response = index.similarity_search(
-            query_text=q.question,
-            columns=["chunk_id", "doc_id", "page_start", "page_end"],
-            num_results=TOP_K,
-            query_type=QUERY_TYPE,
-        )
+        with contextlib.redirect_stdout(io.StringIO()):
+            response = index.similarity_search(
+                query_text=q.question,
+                columns=["chunk_id", "doc_id", "page_start", "page_end"],
+                num_results=TOP_K,
+                query_type=QUERY_TYPE,
+                filters={"entry_id": q.entry_id} if SCOPE_TO_TENDER else None,
+            )
         found = response["result"]["data_array"]
     except Exception as error:
         failures += 1
@@ -169,6 +182,7 @@ for q in questions:
             INDEX_NAME,
             QUERY_TYPE,
             TOP_K,
+            SCOPE_TO_TENDER,
             q.question_id,
             first_rank(q.chunk_id, chunk_ids),
             first_rank_by_location(q.doc_id, q.page_start, q.page_end, locations),
@@ -188,13 +202,13 @@ if result_rows:
     spark.createDataFrame(
         result_rows,
         "run_id string, run_at timestamp, index_name string, query_type string, top_k int, "
-        "question_id string, chunk_rank int, location_rank int",
-    ).write.mode("append").saveAsTable("gold.rag_eval_results")
+        "scoped boolean, question_id string, chunk_rank int, location_rank int",
+    ).write.mode("append").option("mergeSchema", "true").saveAsTable("gold.rag_eval_results")
 
-chunk_ranks = [row[6] for row in result_rows]
-location_ranks = [row[7] for row in result_rows]
+chunk_ranks = [row[7] for row in result_rows]
+location_ranks = [row[8] for row in result_rows]
 
-print(f"query_type={QUERY_TYPE} questions={len(result_rows)}")
+print(f"query_type={QUERY_TYPE} scoped_to_tender={SCOPE_TO_TENDER} questions={len(result_rows)}")
 for k in (1, 3, 5, 10):
     if k <= TOP_K:
         print(
@@ -206,9 +220,10 @@ print(f"MRR   chunk={mean_reciprocal_rank(chunk_ranks):.3f}  document+page={mean
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT query_type, count(*) AS questions,
+# MAGIC SELECT query_type, coalesce(scoped, false) AS scoped_to_tender, count(*) AS questions,
 # MAGIC        round(avg(CASE WHEN chunk_rank <= 5 THEN 1 ELSE 0 END), 3) AS hit_at_5_chunk,
 # MAGIC        round(avg(CASE WHEN location_rank <= 5 THEN 1 ELSE 0 END), 3) AS hit_at_5_location,
 # MAGIC        max(run_at) AS last_run
 # MAGIC FROM gold.rag_eval_results
-# MAGIC GROUP BY query_type
+# MAGIC GROUP BY query_type, coalesce(scoped, false)
+# MAGIC ORDER BY scoped_to_tender, query_type
