@@ -11,14 +11,14 @@ KIND_LABELS = {
 SYSTEM_PROMPT = (
     "Eres un asistente que responde preguntas sobre pliegos de contratación pública españoles. "
     "Usa SOLO los fragmentos numerados del contexto. "
-    "Cita cada afirmación con el número de su fragmento entre corchetes, por ejemplo [1]. "
+    "Cita cada afirmación con el número de su fragmento entre corchetes normales, solo el número, por ejemplo [1]. "
     f'Si los fragmentos no contienen la respuesta, responde exactamente: "{NO_ANSWER}" '
     "No inventes datos, importes, plazos ni fechas. "
     "No añadas conclusiones, recomendaciones ni consejos. "
     "Responde en español, en un máximo de seis frases."
 )
 
-CITATION = re.compile(r"\[(\d+)\]")
+CITATION = re.compile(r"[\[【](\d+)(?:†[^\]】]*)?[\]】]")
 
 SEARCH_COLUMNS = [
     "chunk_id",
@@ -105,6 +105,10 @@ def extract_text(content) -> str:
         ]
         return "\n".join(parts).strip()
     return str(content).strip()
+
+
+def normalize_citations(text: str) -> str:
+    return CITATION.sub(lambda match: f"[{match.group(1)}]", text)
 
 
 def cited_numbers(answer: str) -> list[int]:

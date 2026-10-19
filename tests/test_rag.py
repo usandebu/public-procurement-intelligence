@@ -6,6 +6,7 @@ from procurement.rag import (
     extract_text,
     format_context,
     is_no_answer,
+    normalize_citations,
     parse_sources,
 )
 
@@ -87,3 +88,17 @@ def test_is_no_answer_detects_the_refusal_phrase():
     assert is_no_answer(NO_ANSWER)
     assert is_no_answer("  " + NO_ANSWER.lower())
     assert not is_no_answer("El plazo es de 12 meses [1].")
+
+
+def test_normalize_citations_unifies_the_variants_models_emit():
+    fullwidth = "【1】"
+    with_lines = "[2†L1-L3]"
+    text = f"Plazo de 12 meses {fullwidth}. Prorrogable {with_lines} y [3]."
+
+    assert normalize_citations(text) == "Plazo de 12 meses [1]. Prorrogable [2] y [3]."
+
+
+def test_cited_numbers_recognises_every_citation_style():
+    text = "A 【1】, B [2†L4-L9], C [3]."
+
+    assert cited_numbers(text) == [1, 2, 3]

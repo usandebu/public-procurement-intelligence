@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # 09 - RAG smoke test
 # MAGIC
-# MAGIC Answers sample questions end to end: hybrid retrieval scoped to a tender, generation with the LLM from the retrieved fragments only, and cited sources. Includes an unanswerable question to check the refusal.
+# MAGIC Answers sample questions end to end: hybrid retrieval scoped to a tender, generation with the LLM from the retrieved fragments only, and cited sources. Includes two unanswerable questions (an unrelated one and a question from another tender) to check the refusal.
 # MAGIC
 # MAGIC **Reads:** Vector Search index `silver.document_chunks_index`, `gold.rag_eval_questions`, `silver.document_chunks`
 # MAGIC
@@ -30,6 +30,7 @@ from procurement.rag import (
     cited_sources,
     extract_text,
     is_no_answer,
+    normalize_citations,
     parse_sources,
 )
 
@@ -74,7 +75,7 @@ def answer(question, entry_id=None):
         max_tokens=1500,
         temperature=0,
     )
-    text = extract_text(completion.choices[0].message.content)
+    text = normalize_citations(extract_text(completion.choices[0].message.content))
     return {"answer": text, "sources": sources, "cited": cited_sources(text, sources)}
 
 
@@ -111,7 +112,7 @@ for row in samples:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Unanswerable question
+# MAGIC ## Unanswerable questions
 
 # COMMAND ----------
 
@@ -119,6 +120,11 @@ entry_id = samples[0].entry_id
 question = "¿Cuál es el color corporativo del logotipo del adjudicatario?"
 result = answer(question, entry_id)
 show(question, result)
+results.append(result)
+
+question = samples[1].question
+result = answer(question, entry_id)
+show(f"(question from another tender) {question}", result)
 results.append(result)
 
 # COMMAND ----------
