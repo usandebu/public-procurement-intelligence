@@ -6,6 +6,7 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import DatabricksError
 from databricks.vector_search.client import VectorSearchClient
 
+from procurement.formatting import format_deadline, format_euros
 from procurement.rag import SEARCH_COLUMNS, answer_question
 
 CATALOG = os.getenv("CATALOG", "procurement")
@@ -53,11 +54,12 @@ def search(question: str, entry_id: str | None, num_results: int) -> list[list]:
 
 
 def complete(messages: list[dict]):
-    llm = workspace_client().serving_endpoints.get_open_ai_client()
-    completion = llm.chat.completions.create(
-        model=GENERATOR, messages=messages, max_tokens=1500, temperature=0
+    response = workspace_client().api_client.do(
+        "POST",
+        f"/serving-endpoints/{GENERATOR}/invocations",
+        body={"messages": messages, "max_tokens": 1500, "temperature": 0},
     )
-    return completion.choices[0].message.content
+    return response["choices"][0]["message"]["content"]
 
 
 def tender_label(tender: dict) -> str:
@@ -91,9 +93,13 @@ with st.sidebar:
         )
         st.markdown(f"**Organismo:** {selected['organ_name']}")
         if selected.get("budget"):
-            st.markdown(f"**Presupuesto (sin IVA):** {selected['budget']:,.0f} €")
+            st.markdown(
+                f"**Presupuesto (sin IVA):** {format_euros(selected['budget'])}"
+            )
         if selected.get("submission_deadline"):
-            st.markdown(f"**Plazo de presentación:** {selected['submission_deadline']}")
+            st.markdown(
+                f"**Plazo de presentación:** {format_deadline(selected['submission_deadline'])}"
+            )
         if selected.get("detail_url"):
             st.link_button(
                 "Abrir en la Plataforma de Contratación", selected["detail_url"]

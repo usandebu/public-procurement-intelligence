@@ -1,4 +1,3 @@
 streamlit
-databricks-sdk
+databricks-sdk>=0.40.0
 databricks-vectorsearch
-openai
