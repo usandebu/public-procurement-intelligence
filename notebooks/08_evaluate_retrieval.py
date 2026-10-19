@@ -220,10 +220,15 @@ print(f"MRR   chunk={mean_reciprocal_rank(chunk_ranks):.3f}  document+page={mean
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT query_type, coalesce(scoped, false) AS scoped_to_tender, count(*) AS questions,
-# MAGIC        round(avg(CASE WHEN chunk_rank <= 5 THEN 1 ELSE 0 END), 3) AS hit_at_5_chunk,
-# MAGIC        round(avg(CASE WHEN location_rank <= 5 THEN 1 ELSE 0 END), 3) AS hit_at_5_location,
-# MAGIC        max(run_at) AS last_run
-# MAGIC FROM gold.rag_eval_results
-# MAGIC GROUP BY query_type, coalesce(scoped, false)
+# MAGIC WITH runs AS (
+# MAGIC   SELECT run_id, query_type, coalesce(scoped, false) AS scoped_to_tender, count(*) AS questions,
+# MAGIC          round(avg(CASE WHEN chunk_rank <= 5 THEN 1 ELSE 0 END), 3) AS hit_at_5_chunk,
+# MAGIC          round(avg(CASE WHEN location_rank <= 5 THEN 1 ELSE 0 END), 3) AS hit_at_5_location,
+# MAGIC          max(run_at) AS run_at
+# MAGIC   FROM gold.rag_eval_results
+# MAGIC   GROUP BY run_id, query_type, coalesce(scoped, false)
+# MAGIC )
+# MAGIC SELECT query_type, scoped_to_tender, questions, hit_at_5_chunk, hit_at_5_location, run_at
+# MAGIC FROM runs
+# MAGIC QUALIFY row_number() OVER (PARTITION BY query_type, scoped_to_tender ORDER BY run_at DESC) = 1
 # MAGIC ORDER BY scoped_to_tender, query_type
