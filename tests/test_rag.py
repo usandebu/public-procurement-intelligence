@@ -102,3 +102,37 @@ def test_cited_numbers_recognises_every_citation_style():
     text = "A 【1】, B [2†L4-L9], C [3]."
 
     assert cited_numbers(text) == [1, 2, 3]
+
+
+def test_answer_question_retrieves_generates_and_resolves_citations():
+    from procurement.rag import answer_question
+
+    calls = {}
+
+    def search(query, entry_id, num_results):
+        calls["search"] = (query, entry_id, num_results)
+        return ROWS
+
+    def complete(messages):
+        calls["messages"] = messages
+        return "El plazo es de 12 meses \u30102\u3011."
+
+    result = answer_question("¿Plazo?", search, complete, entry_id="e1")
+
+    assert calls["search"] == ("¿Plazo?", "e1", 5)
+    assert "Texto dos" in calls["messages"][1]["content"]
+    assert result.text == "El plazo es de 12 meses [2]."
+    assert [s.number for s in result.cited] == [2]
+    assert not result.is_refusal
+
+
+def test_answer_question_refuses_without_calling_the_model_when_nothing_is_found():
+    from procurement.rag import answer_question
+
+    def complete(messages):
+        raise AssertionError("the model must not be called without sources")
+
+    result = answer_question("¿Algo?", lambda q, e, n: [], complete)
+
+    assert result.is_refusal
+    assert result.sources == [] and result.cited == []

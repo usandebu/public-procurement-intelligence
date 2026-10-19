@@ -26,3 +26,14 @@ targets:
   prod:
     variables:
       catalog: procurement
+    resources:
+      apps:
+        procurement_qa:
+          name: procurement-qa
+          description: Question answering over Spanish public tender documents
+          source_code_path: .
+          resources:
+            - name: generator
+              serving_endpoint:
+                name: databricks-gpt-oss-120b
+                permission: CAN_QUERY

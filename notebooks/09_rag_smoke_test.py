@@ -24,15 +24,7 @@ from databricks.vector_search.client import VectorSearchClient
 
 sys.path.append(os.path.abspath("../src"))
 
-from procurement.rag import (
-    SEARCH_COLUMNS,
-    build_messages,
-    cited_sources,
-    extract_text,
-    is_no_answer,
-    normalize_citations,
-    parse_sources,
-)
+from procurement.rag import SEARCH_COLUMNS, answer_question, is_no_answer
 
 dbutils.widgets.text("catalog", "procurement")
 dbutils.widgets.text("endpoint_name", "procurement_vs")
@@ -59,24 +51,28 @@ llm = WorkspaceClient().serving_endpoints.get_open_ai_client()
 
 # COMMAND ----------
 
-def answer(question, entry_id=None):
+def search(question, entry_id, num_results):
     with contextlib.redirect_stdout(io.StringIO()):
         response = index.similarity_search(
             query_text=question,
             columns=SEARCH_COLUMNS,
-            num_results=NUM_RESULTS,
+            num_results=num_results,
             query_type="HYBRID",
             filters={"entry_id": entry_id} if entry_id else None,
         )
-    sources = parse_sources(response["result"]["data_array"])
+    return response["result"]["data_array"]
+
+
+def complete(messages):
     completion = llm.chat.completions.create(
-        model=GENERATOR,
-        messages=build_messages(question, sources),
-        max_tokens=1500,
-        temperature=0,
+        model=GENERATOR, messages=messages, max_tokens=1500, temperature=0
     )
-    text = normalize_citations(extract_text(completion.choices[0].message.content))
-    return {"answer": text, "sources": sources, "cited": cited_sources(text, sources)}
+    return completion.choices[0].message.content
+
+
+def answer(question, entry_id=None):
+    result = answer_question(question, search, complete, entry_id, NUM_RESULTS)
+    return {"answer": result.text, "sources": result.sources, "cited": result.cited}
 
 
 def show(question, result):

@@ -1,0 +1,10 @@
+command: ["streamlit", "run", "app/app.py"]
+env:
+  - name: PYTHONPATH
+    value: src
+  - name: CATALOG
+    value: procurement
+  - name: VS_ENDPOINT
+    value: procurement_vs
+  - name: GENERATOR_ENDPOINT
+    value: databricks-gpt-oss-120b

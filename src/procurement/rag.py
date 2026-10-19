@@ -127,3 +127,24 @@ def cited_sources(answer: str, sources: list[Source]) -> list[Source]:
 
 def is_no_answer(answer: str) -> bool:
     return NO_ANSWER.lower() in answer.lower()
+
+
+@dataclass(frozen=True)
+class Answer:
+    text: str
+    sources: list[Source]
+    cited: list[Source]
+
+    @property
+    def is_refusal(self) -> bool:
+        return is_no_answer(self.text)
+
+
+def answer_question(question, search, complete, entry_id=None, num_results=5) -> Answer:
+    sources = parse_sources(search(question, entry_id, num_results))
+    if not sources:
+        return Answer(text=NO_ANSWER, sources=[], cited=[])
+    text = normalize_citations(
+        extract_text(complete(build_messages(question, sources)))
+    )
+    return Answer(text=text, sources=sources, cited=cited_sources(text, sources))
