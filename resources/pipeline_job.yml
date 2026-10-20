@@ -7,6 +7,8 @@ resources:
       parameters:
         - name: catalog
           default: ${var.catalog}
+        - name: max_tenders
+          default: "${var.max_tenders}"
 
       email_notifications:
         on_failure:
@@ -40,6 +42,53 @@ resources:
             - task_key: silver_tenders
           notebook_task:
             notebook_path: ../notebooks/03_gold_tenders.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          timeout_seconds: 1800
+
+        - task_key: download_documents
+          depends_on:
+            - task_key: gold_tenders
+          notebook_task:
+            notebook_path: ../notebooks/04_download_documents.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              max_tenders: "{{job.parameters.max_tenders}}"
+          max_retries: 1
+          timeout_seconds: 3600
+
+        - task_key: extract_pages
+          depends_on:
+            - task_key: download_documents
+          notebook_task:
+            notebook_path: ../notebooks/05_extract_pages.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          timeout_seconds: 3600
+
+        - task_key: chunk_documents
+          depends_on:
+            - task_key: extract_pages
+          notebook_task:
+            notebook_path: ../notebooks/06_chunk_documents.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          timeout_seconds: 1800
+
+        - task_key: sync_vector_index
+          depends_on:
+            - task_key: chunk_documents
+          notebook_task:
+            notebook_path: ../notebooks/07_vector_index.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+          timeout_seconds: 5400
+
+        - task_key: export_tender_catalog
+          depends_on:
+            - task_key: sync_vector_index
+          notebook_task:
+            notebook_path: ../notebooks/10_export_tender_catalog.py
             base_parameters:
               catalog: "{{job.parameters.catalog}}"
           timeout_seconds: 1800

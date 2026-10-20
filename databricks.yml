@@ -10,10 +10,13 @@ variables:
     default: procurement
   alert_email:
     description: Address notified when the pipeline job fails
+  max_tenders:
+    description: Open tenders closest to their deadline whose documents are processed
+    default: "40"
 
 sync:
   exclude:
-    - docs/**
+    - resources/images/**
     - tests/**
 
 targets:

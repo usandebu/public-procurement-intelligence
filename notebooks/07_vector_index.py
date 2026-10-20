@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # 07 - Vector Search index
 # MAGIC
-# MAGIC Creates the Vector Search endpoint and a Delta Sync index over `silver.document_chunks` with managed multilingual embeddings, or triggers a sync when the index already exists. Ends with a sample query.
+# MAGIC Creates the Vector Search endpoint and a Delta Sync index over `silver.document_chunks` with managed multilingual embeddings, or triggers a sync when the index already exists. Waits until every chunk is indexed and ends with a sample query.
 # MAGIC
 # MAGIC **Reads:** `silver.document_chunks`
 # MAGIC
@@ -13,6 +13,8 @@
 # MAGIC %pip install databricks-vectorsearch
 
 # COMMAND ----------
+
+import time
 
 from databricks.vector_search.client import VectorSearchClient
 
@@ -39,6 +41,9 @@ SYNCED_COLUMNS = [
     "page_end",
     "text",
 ]
+
+SYNC_TIMEOUT_SECONDS = 3000
+SYNC_POLL_SECONDS = 30
 
 client = VectorSearchClient(disable_notice=True)
 
@@ -84,6 +89,25 @@ else:
     index = client.get_index(endpoint_name=ENDPOINT_NAME, index_name=INDEX_NAME)
     index.sync()
     print(f"sync triggered: {INDEX_NAME}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Wait for the sync
+
+# COMMAND ----------
+
+source_rows = spark.table(SOURCE_TABLE).count()
+deadline = time.time() + SYNC_TIMEOUT_SECONDS
+
+while True:
+    indexed_rows = index.describe().get("status", {}).get("indexed_row_count", 0)
+    print(f"indexed rows: {indexed_rows} / {source_rows}")
+    if indexed_rows >= source_rows:
+        break
+    if time.time() > deadline:
+        raise TimeoutError(f"index not in sync after {SYNC_TIMEOUT_SECONDS} seconds")
+    time.sleep(SYNC_POLL_SECONDS)
 
 # COMMAND ----------
 
